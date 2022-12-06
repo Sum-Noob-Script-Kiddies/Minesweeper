@@ -13,6 +13,30 @@ class Cell():
     def expose(self, minefield):
         # Sean will work on this
         # Expose this cell and other cells around it if 0
+        visiting = [minefield[self.coord[0]][self.coord[1]]]
+        visited = []
+        if not self.exposed:
+            while visiting:
+                cur_cell = visiting.pop(0)
+                visited.append(cur_cell)
+                cur_cell.exposed = True
+                y,x = (cur_cell.coord[0]-1, cur_cell.coord[0]+2), (cur_cell.coord[1]-1, cur_cell.coord[1]+2)
+                if y[0] < 0:
+                    y[0] = 0
+                if y[1] > 0:
+                    y[1] = ROWS-1
+                if x[0] < 0:
+                    x[0] = 0
+                if x[1] > COLS:
+                    x[1] = COLS-1
+                for i in range(y[0], y[1]):
+                    for j in range(x[0], x[1]):
+                        if minefield[i][j] not in visited and not self.exposed and self.val == 0:
+                            visiting.append(minefield[i][j])
+                        elif minefield[i][j].is_mine:
+                            """You Lose!!!"""
+                        else:
+                            minefield[i][j].exposed = True
         pass
 
 
