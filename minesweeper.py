@@ -11,33 +11,49 @@ class Cell():
         self.exposed = exposed  # Sean will take care of this
  
     def expose(self, minefield):
-        # Sean will work on this
-        # Expose this cell and other cells around it if 0
-        visiting = [minefield[self.coord[0]][self.coord[1]]]
-        visited = []
+        """Expose this cell and other cells around it if 0"""
+        visiting = [self]
+        if self.is_mine:
+            print("Lose")
+            return
         if not self.exposed:
-            while visiting:
-                cur_cell = visiting.pop(0)
-                visited.append(cur_cell)
-                cur_cell.exposed = True
-                y,x = (cur_cell.coord[0]-1, cur_cell.coord[0]+2), (cur_cell.coord[1]-1, cur_cell.coord[1]+2)
-                if y[0] < 0:
-                    y[0] = 0
-                if y[1] > 0:
-                    y[1] = ROWS-1
-                if x[0] < 0:
-                    x[0] = 0
-                if x[1] > COLS:
-                    x[1] = COLS-1
-                for i in range(y[0], y[1]):
-                    for j in range(x[0], x[1]):
-                        if minefield[i][j] not in visited and not self.exposed and self.val == 0:
-                            visiting.append(minefield[i][j])
-                        elif minefield[i][j].is_mine:
-                            """You Lose!!!"""
-                        else:
-                            minefield[i][j].exposed = True
-        pass
+            if self.val == 0:
+                while visiting:
+                    cur_cell = visiting.pop()
+                    cur_cell.exposed = True
+                    y,x = (cur_cell.coord[0]-1, cur_cell.coord[0]+2), (cur_cell.coord[1]-1, cur_cell.coord[1]+2)
+                    if y[0] < 0:
+                        y[0] = 0
+                    if y[1] > ROWS:
+                        y[1] = ROWS
+                    if x[0] < 0:
+                        x[0] = 0
+                    if x[1] > COLS:
+                        x[1] = COLS
+                    for i in range(y[0], y[1]):
+                        for j in range(x[0], x[1]):
+                            if not minefield[i][j].exposed and minefield[i][j].val == 0:
+                                visiting.append(minefield[i][j])
+                            else:
+                                minefield[i][j].exposed = True
+            else:
+                self.exposed = True
+
+    def expose2(self, minefield):
+        """Expose this cell and other cells around it if 0 recursively"""
+        if self.exposed:
+            return 
+        if self.is_mine:
+            print("Lose")
+        self.exposed = True
+        if self.val == 0:
+            y, x = (self.coord[0]-1, self.coord[0]+2), (self.coord[1]-1, self.coord[1]+2)
+            y = max(y[0],0), min(ROWS,y[1])
+            x = max(x[0],0), min(COLS,x[1])
+            for i in range(y[0], y[1]):
+                for j in range(x[0], x[1]):
+                    minefield[i][j].expose2()
+        
 
 
 # Melvin's Part
