@@ -21,17 +21,17 @@ class Cell():
                 while visiting:
                     cur_cell = visiting.pop()
                     cur_cell.exposed = True
-                    y,x = (cur_cell.coord[0]-1, cur_cell.coord[0]+2), (cur_cell.coord[1]-1, cur_cell.coord[1]+2)
-                    if y[0] < 0:
-                        y[0] = 0
-                    if y[1] > ROWS:
-                        y[1] = ROWS
-                    if x[0] < 0:
-                        x[0] = 0
-                    if x[1] > COLS:
-                        x[1] = COLS
-                    for i in range(y[0], y[1]):
-                        for j in range(x[0], x[1]):
+                    y_range, x_range = (cur_cell.coord[0]-1, cur_cell.coord[0]+2), (cur_cell.coord[1]-1, cur_cell.coord[1]+2)
+                    if y_range[0] < 0:
+                        y_range[0] = 0
+                    if y_range[1] > ROWS:
+                        y_range[1] = ROWS
+                    if x_range[0] < 0:
+                        x_range[0] = 0
+                    if x_range[1] > COLS:
+                        x_range[1] = COLS
+                    for i in range(y_range[0], y_range[1]):
+                        for j in range(x_range[0], x_range[1]):
                             if not minefield[i][j].exposed and minefield[i][j].val == 0:
                                 visiting.append(minefield[i][j])
                             else:
@@ -47,11 +47,11 @@ class Cell():
             print("Lose")
         self.exposed = True
         if self.val == 0:
-            y, x = (self.coord[0]-1, self.coord[0]+2), (self.coord[1]-1, self.coord[1]+2)
-            y = max(y[0],0), min(ROWS,y[1])
-            x = max(x[0],0), min(COLS,x[1])
-            for i in range(y[0], y[1]):
-                for j in range(x[0], x[1]):
+            y_range, x_range = (self.coord[0]-1, self.coord[0]+2), (self.coord[1]-1, self.coord[1]+2)
+            y_range = max(y_range[0], 0), min(ROWS, y_range[1])
+            x_range = max(x_range[0], 0), min(COLS, x_range[1])
+            for i in range(y_range[0], y_range[1]):
+                for j in range(x_range[0], x_range[1]):
                     minefield[i][j].expose2()
         
 
