@@ -12,37 +12,8 @@ class Cell():
         self.is_flagged = is_flagged # Don't care for now
         self.exposed = exposed  # Sean will take care of this
         self.minefield = minefield
- 
-    def expose(self):
-        """Expose this cell and other cells around it if 0"""
-        visiting = [self]
-        if self.is_mine:
-            print("Lose")
-            return
-        if not self.exposed:
-            if self.val == 0:
-                while visiting:
-                    cur_cell = visiting.pop()
-                    cur_cell.exposed = True
-                    y_range, x_range = (cur_cell.coord[0]-1, cur_cell.coord[0]+2), (cur_cell.coord[1]-1, cur_cell.coord[1]+2)
-                    if y_range[0] < 0:
-                        y_range[0] = 0
-                    if y_range[1] > ROWS:
-                        y_range[1] = ROWS
-                    if x_range[0] < 0:
-                        x_range[0] = 0
-                    if x_range[1] > COLS:
-                        x_range[1] = COLS
-                    for i in range(y_range[0], y_range[1]):
-                        for j in range(x_range[0], x_range[1]):
-                            if not self.minefield[i][j].exposed and self.minefield[i][j].val == 0:
-                                visiting.append(minefield[i][j])
-                            else:
-                                self.minefield[i][j].exposed = True
-            else:
-                self.exposed = True
 
-    def expose2(self):
+    def expose2(self): 
         """Expose this cell and other cells around it if 0 recursively"""
         if self.exposed:
             return 
@@ -56,10 +27,11 @@ class Cell():
             for i in range(y_range[0], y_range[1]):
                 for j in range(x_range[0], x_range[1]):
                     self.minefield[i][j].expose2()
-        
 
-def generate_minefield() -> list:
+
+def generate_minefield(start_row: int, start_col: int) -> list[list[Cell]]:
     """Generates random minefield - 2D Array of Cell object type"""
+    
     def generate_base() -> list[list[Cell]]:
         """Generates base field - 2D Array of Cell object type"""
         base = []
@@ -77,7 +49,8 @@ def generate_minefield() -> list:
             while True:
                 randy = randint(0, ROWS-1)
                 randx = randint(0, COLS-1)
-                if not minefield[randy][randx].is_mine:
+                if not (minefield[randy][randx].is_mine or randy in blocked_rows or randx in blocked_cols):
+                    #Ensures cell is not already a bomb, or in blacklisted 3x3 matrix based on start point
                     minefield[randy][randx].is_mine = True
                     break
         return minefield
@@ -117,12 +90,13 @@ def generate_minefield() -> list:
                     count += 1
         return count
 
+    blocked_rows = list(range(start_row-1,start_row+1))
+    blocked_cols = list(range(start_col-1,start_col+1))
     minefield = generate_base()
     minefield = generate_bombs(minefield)    
     minefield = allocate_val(minefield)
     # check_mines(minefield)
     return minefield
-
 
 # ================Debugging tools===============
 
@@ -130,7 +104,7 @@ def print_field(minefield) -> None:
     """Debugging - Prints field"""
     for y in range(ROWS):
         for x in range(COLS):
-            if minefield[y][x].exposed:
+            if not minefield[y][x].exposed:
                 if minefield[y][x].is_mine:
                     print("*",end=" ")
                 else:
@@ -139,14 +113,6 @@ def print_field(minefield) -> None:
                 print("X",end=" ")            
         print()
 
-minefield = generate_minefield()
+minefield = generate_minefield(5,5)
+print(minefield[5][5].is_mine)
 print_field(minefield)
-
-# Test Minesweeper
-# coord = [int(i) for i in input("Coord: ").split()]
-# while coord != 0:
-#     y, x = coord
-#     minefield[y][x].expose2()
-#     print_field(minefield)
-#     coord = [int(i) for i in input("Coord: ").split()]
-
