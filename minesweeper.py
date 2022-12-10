@@ -13,7 +13,7 @@ class Cell():
         self.exposed = exposed  # Sean will take care of this
         self.minefield = minefield
 
-    def expose2(self): 
+    def expose(self): 
         """Expose this cell and other cells around it if 0 recursively"""
         if self.exposed:
             return 
@@ -26,11 +26,19 @@ class Cell():
             x_range = max(x_range[0], 0), min(COLS, x_range[1])
             for i in range(y_range[0], y_range[1]):
                 for j in range(x_range[0], x_range[1]):
-                    self.minefield[i][j].expose2()
+                    self.minefield[i][j].expose()
 
 
-def generate_minefield(start_row: int, start_col: int) -> list[list[Cell]]:
-    """Generates random minefield - 2D Array of Cell object type"""
+def generate_minefield(start_row: int, start_col: int, mode: int) -> list[list[Cell]]:
+    """Generates random minefield - 2D Array of Cell object type
+
+        Parameters:
+            start_row: starting y-coordinate
+            start_col: starting x-coordinate
+            mode:
+                0 - (Are you cheating?): Ensures 1st cell is always a "0"
+                1 - (Standard): Ensures 1st cell is minimally an integer """
+
     
     def generate_base() -> list[list[Cell]]:
         """Generates base field - 2D Array of Cell object type"""
@@ -42,17 +50,25 @@ def generate_minefield(start_row: int, start_col: int) -> list[list[Cell]]:
             base.append(row)
         return base
         
-    def generate_bombs(minefield) -> list[list[Cell]]:
+    def generate_bombs(minefield: list[list[Cell]], blocked_rows: list, blocked_cols: list, mode: int) -> list[list[Cell]]:
         """Determines number of bombs and assigns them to base field"""
         bombs = BOMBS
         for _ in range(bombs):
             while True:
                 randy = randint(0, ROWS-1)
                 randx = randint(0, COLS-1)
-                if not (minefield[randy][randx].is_mine or randy in blocked_rows or randx in blocked_cols):
-                    #Ensures cell is not already a bomb, or in blacklisted 3x3 matrix based on start point
-                    minefield[randy][randx].is_mine = True
-                    break
+                if mode == 1:
+                    #Ensures cell is some integer - Not a bomb
+                    if not minefield[randy][randx].is_mine and not (randy == blocked_rows[1] and randx == blocked_cols[1]):
+                        minefield[randy][randx].is_mine = True
+                        break
+                if mode == 0:
+                    #Ensures cell is a "0"
+                    if not minefield[randy][randx].is_mine and not (randy in blocked_rows or randx in blocked_cols):
+                        #Ensures cell is not already a bomb
+                        minefield[randy][randx].is_mine = True
+                        break
+
         return minefield
 
     def allocate_val(minefield) -> list[list[Cell]]:
@@ -90,10 +106,8 @@ def generate_minefield(start_row: int, start_col: int) -> list[list[Cell]]:
                     count += 1
         return count
 
-    blocked_rows = list(range(start_row-1,start_row+1))
-    blocked_cols = list(range(start_col-1,start_col+1))
     minefield = generate_base()
-    minefield = generate_bombs(minefield)    
+    minefield = generate_bombs(minefield, list(range(start_row-1,start_row+1)), list(range(start_col-1,start_col+1)), mode)    
     minefield = allocate_val(minefield)
     # check_mines(minefield)
     return minefield
@@ -105,6 +119,7 @@ def print_field(minefield) -> None:
     for y in range(ROWS):
         for x in range(COLS):
             if not minefield[y][x].exposed:
+                # "not" added in for debugging
                 if minefield[y][x].is_mine:
                     print("*",end=" ")
                 else:
@@ -113,6 +128,6 @@ def print_field(minefield) -> None:
                 print("X",end=" ")            
         print()
 
-minefield = generate_minefield(5,5)
+minefield = generate_minefield(5,5,0)
 print(minefield[5][5].is_mine)
 print_field(minefield)
