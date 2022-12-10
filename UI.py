@@ -250,18 +250,18 @@ class CellButton():
 
         self.normal_button = Button(normal_button_imgs, offset, funcs={1: self.expose, 3: self.flag}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
         self.flagged_button = Button(flag_button_imgs, offset, funcs={3: self.flag}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
-        self.revealed_button = Button(reveal_button_imgs, offset, funcs={1: self.expose_around}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
+        self.revealed_button = Button(reveal_button_imgs, offset, funcs={1: self.attempt_expose_around}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
         self.active_button = self.normal_button
 
         self.cell = cell
-        
+
     def expose(self, _):
         self.cell.expose()
 
     def flag(self, _):
         self.cell.flag()
 
-    def expose_around(self, _):
+    def attempt_expose_around(self, _):
         self.cell.expose_around()
 
     def _on_mouse_button(self, event):
