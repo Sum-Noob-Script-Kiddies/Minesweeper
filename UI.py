@@ -253,24 +253,26 @@ class CellButton():
         self.revealed_button = Button(reveal_button_imgs, offset, funcs={1: self.expose_around}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
         self.active_button = self.normal_button
 
-        self.flagged = False
-
-    # TEMPORARY
+        self.cell = cell
+        
     def expose(self, _):
-        self.active_button = self.revealed_button
-    # TEMPORARY
+        self.cell.expose()
+
     def flag(self, _):
-        self.flagged = not self.flagged
-        if self.flagged:
-            self.active_button = self.flagged_button
-        else:
-            self.active_button = self.normal_button
-    # TEMPORARY
+        self.cell.flag()
+
     def expose_around(self, _):
-        print("EXPOSE AROUND")
+        self.cell.expose_around()
 
     def _on_mouse_button(self, event):
         self.active_button._on_mouse_button(event)
 
     def draw(self):
+        cell = self.cell
+        if cell.is_exposed:
+            self.active_button = self.revealed_button
+        elif cell.is_flagged:
+            self.active_button = self.flagged_button
+        else:
+            self.active_button = self.normal_button
         self.active_button.draw()

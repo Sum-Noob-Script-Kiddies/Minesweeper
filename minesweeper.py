@@ -30,6 +30,9 @@ class Cell():
 
         listening_mouse_button.add(self.button)
 
+    def flag(self):
+        self.is_flagged = not self.is_flagged
+
     def expose(self): 
         """Expose this cell and `.expose_around()` if no mines around it"""
         if self.is_exposed:
@@ -47,7 +50,7 @@ class Cell():
         x_range = max(x_range[0], 0), min(COLS, x_range[1])
         for i in range(y_range[0], y_range[1]):
             for j in range(x_range[0], x_range[1]):
-                self.minefield[i][j].expose()
+                self.minefield.matrix[i][j].expose()
 
 class Minefield():
     """Minefield consists of `Cell`s which each has a `CellButton`
