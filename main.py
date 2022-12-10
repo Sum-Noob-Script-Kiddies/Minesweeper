@@ -1,6 +1,6 @@
-import pygame as pg
-from UI import Button
 from config import *
+import pygame as pg
+import UI
 import minesweeper
 
 pg.init()
@@ -8,36 +8,20 @@ pg.init()
 screen = pg.display.set_mode((960,540))
 screen_rect = screen.get_rect()
 
-screen.fill(COLOR_BG)
-
-buttons = []
-
-rows_n, cols_n = 16, 16
-cell_size = 25
-gap = 3
-
-board = pg.Surface((cell_size*cols_n + gap*(cols_n-1), cell_size*rows_n + gap*(rows_n-1)))
-board.fill(COLOR_BG2)
-board_rect = board.get_rect(center=screen_rect.center)
-
-for row in range(rows_n):
-    for col in range(cols_n):
-        rel_pos = ((cell_size+gap)*col, (cell_size+gap)*row)    # Relative position of the cell on the board
-        buttons.append(Button(("assets/cell_idle.png", "assets/cell_hover.png"), rel_pos, on_surface=board, surface_abs_pos=board_rect.topleft))
+cellstyle = UI.CellButtonStyle(("assets/cell/idle.png", "assets/cell/hover.png"), "assets/cell/flag.png", "assets/cell/mine.png", "assets/cell/")
+minefield = minesweeper.Minefield(screen_rect.center, cellstyle, mode=0)     # Creates a minefield with the given cellstyle and mode
 
 while True:
-    mouse = pg.mouse.get_pos()
-    for event in pg.event.get():
+    for event in pg.event.get():    # Event Loop
         if event.type == pg.QUIT:
             pg.quit()
+        # Passes all mouse button up/down events too all listeners
+        # Objecting in `listening_mouse_button` have listeners `._on_mouse_button()`
         if event.type == pg.MOUSEBUTTONDOWN or event.type == pg.MOUSEBUTTONUP:
-            for button in buttons:
-                button.mouse_check(event.pos, event)
+            for listening in listening_mouse_button:
+                listening._on_mouse_button(event)
 
-    for button in buttons:
-        button.mouse_check(mouse)
-        button.draw()
-    
-    screen.blit(board, board_rect)
+    screen.fill(COLOR_BG)   # Render the screen's background
+    minefield.draw_board()  # Render the cells onto the board
+    screen.blit(minefield.board, minefield.board_rect)  # Render the board onto the screen
     pg.display.update()
-
