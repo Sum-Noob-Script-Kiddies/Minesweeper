@@ -4,6 +4,7 @@ Our very first Pygame Project
 ## Updates
 - Cells are now clickable
 - Clicking on a 0-Cell will automatically expose the cells around
+- Game Start Event whe
 
 ## Current WIP
 - Game Timer

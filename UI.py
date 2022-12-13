@@ -1,5 +1,6 @@
 from config import *
 import pygame as pg
+import pygame.freetype as freetype
 
 class Button():
     """Button with different textures when Idle, Hovered Over, or Pressed.
@@ -48,8 +49,7 @@ class Button():
         """
 
         # Initialise imgs
-        self.imgs = self.to_surface_none_list(imgs)  # Get self.imgs containing [Surface/None, Surface/None, Surface/None]
-        self.imgs = self.complete_imgs(self.imgs)  # We have self.imgs containing [Surface, Surface, Surface]
+        self.set_imgs(imgs) # Set self.imgs = [Surface, Surface, Surface]
 
         # If no on_surface specified, we will default to the button being blitted onto the game screen
         if on_surface is None:
@@ -63,17 +63,11 @@ class Button():
             self.rect = self.imgs[self.IDLE].get_rect(topleft=offset)
 
         # Initialise funcs
-        if funcs is None:   # If no trigger specified, "Clicked <Button>" function will be assigned
-            funcs = lambda x: print("Clicked", x)
-        if callable(funcs): # Create the function dictionary if only given a function (more specifically a callable)
-            funcs = {1: funcs}  # Defaults to a left-click triggered button
-        elif not isinstance(funcs, dict):   # Error check
-            raise TypeError("funcs not a function or dictionary of functions!")
-        assert all(isinstance(k, int) for k in funcs), "Dictionary keys should be int mouse buttons"
-        self.funcs = funcs
+        self.set_funcs(funcs) # Set self.funcs
 
         self.await_release = None   # The button that is currently awaiting release
         self._img_ind = self.IDLE   # The button's image state is based on this
+        self.is_enabled = False
 
     def _on_mouse_button(self, event):
         """Updates button status based on mouse
@@ -119,8 +113,33 @@ class Button():
         
         Always call `check_mouse` before this to make sure the correct button state is drawn
         """
-        self.hover_check()
+        if self.is_enabled:
+            self.hover_check()
         self.on_surface.blit(self.imgs[self._img_ind], self.rect)
+
+    def set_imgs(self, imgs):
+        self.imgs = self.to_surface_none_list(imgs)  # Get self.imgs containing [Surface/None, Surface/None, Surface/None]
+        self.imgs = self.complete_imgs(self.imgs)  # We have self.imgs containing [Surface, Surface, Surface]
+
+    def set_funcs(self, funcs):
+        if funcs is None:   # If no trigger specified, "Clicked <Button>" function will be assigned
+            funcs = lambda x: print("Clicked", x)
+        if callable(funcs): # Create the function dictionary if only given a function (more specifically a callable)
+            funcs = {1: funcs}  # Defaults to a left-click triggered button
+        elif not isinstance(funcs, dict):   # Error check
+            raise TypeError("funcs not a function or dictionary of functions!")
+        assert all(isinstance(k, int) for k in funcs), "Dictionary keys should be int mouse buttons"
+        self.funcs = funcs
+
+    def enable(self):
+        """Enable button by removing it from the global listening list & hover detection"""
+        listening_mouse_button.add(self)
+        self.is_enabled = True
+
+    def disable(self):
+        """Disable button by removing it from the global listening list & hover detection"""
+        listening_mouse_button.remove(self)
+        self.is_enabled = False
 
     @staticmethod
     def to_surface_none_list(imgs):
@@ -169,12 +188,12 @@ class Button():
 
 class CellButtonStyle():
     """Needs to be provided to `CellButton` to stylize the Buttons
-    
+
     Attributes:
         normal_button_imgs ([pg.Surface, pg.Surface, pg.Surface]): The list of [Idle, Hover, Pressed] Surfaces for the Normal Button
         flag_button_imgs ([pg.Surface, pg.Surface, pg.Surface]): The list of [Idle, Hover, Pressed] Surfaces for the Flagged Button
-        mine_img (pg.Surface): The surface for the Mine's image
-        num_imgs ([pg.Surface, pg.Surface, ...]): The list of surfaces for the numbers. Where num_imgs[i] = Surface for i, (i = 0 to 8)
+        mine_button_imgs ([pg.Surface, pg.Surface, pg.Surface]): The list of [Idle, Hover, Pressed] Surfaces for the Mine Reveal Button
+        num_buttons_imgs ([(pg.Surface 0, pg.Surface 0), (pg.Surface 1, pg.Surface 1), ...]): num_buttons_imgs[i] = (Idle Surface for i, Hover Surface for i), (i = 0 to 8)
     """
     def __init__(self, normal_button_imgs, flag_img, mine_img, num_imgs_dir):
         """
@@ -199,6 +218,7 @@ class CellButtonStyle():
             mine_img = pg.image.load(mine_img)
         mine_img = mine_img.convert_alpha()
         assert isinstance(mine_img, pg.Surface)
+        mine_button_imgs = (mine_img, mine_img, mine_img)
 
         # Create the (Idle, Hover, Pressed) Surfaces for Flag Buttons
         flag_button_imgs = [None, None, None]
@@ -210,69 +230,56 @@ class CellButtonStyle():
         # Numbers will be images stored as 0.png, 1.png, ... in num_imgs_dir (eg. assets/cell/)
         num_imgs = [pg.image.load(num_imgs_dir + f"{i}.png").convert_alpha() for i in range(9)]
         # Now nums_imgs = [Surface for 0, Surface for 1, ...]
+        num_buttons_imgs = [(img, img) for img in num_imgs]
 
         self.normal_button_imgs = normal_button_imgs
         self.flag_button_imgs = flag_button_imgs
-        self.mine_img = mine_img
-        self.num_imgs = num_imgs
+        self.mine_button_imgs = mine_button_imgs
+        self.num_buttons_imgs = num_buttons_imgs
 
-class CellButton():
-    """A CellButton is made up of 3 Buttons (Normal, Flagged, Revealed)
-    
-    Attributes:
-        normal_button (Button): The `Button` that is activated by default
-        flagged_button (Button): The `Button` that is activated when cell is flagged
-        revealed_button (Button): The `Button` that is activated when cell is exposed
+# WIP
+class Text():
+    def __init__(self, text: str, size=0, line_height=None, color=COLOR_LIGHT, font=FONT):
+        renders = []
+        max_line_height = 0
+        for line in text.split("\n"):
+            renders.append(font.render(line, fgcolor=color, size=size))
+
         
-        active_button (Button): The `Button` that is currently activated
-    """
-    def __init__(self, cell, style):
-        """
-        Creates a CellButton that is associated with a Cell
-
-        A CellButton is made up of 3 `Button`s (Normal, Flagged, Revealed),
-        but only 1 is active at any 1 time.
-
-        Args:
-            cell (Cell)
-            style (CellButtonStyle)
-        """
+        offset_from_top = 0
+        # for surface, rect in renders:
+        #     print(surface, rect, surface.get_rect())
+        for surface, rect in renders:
+            print(rect, surface.get_rect())
+            rect.move_ip(0, offset_from_top)
+            offset_from_top += rect.height
         
-        normal_button_imgs = style.normal_button_imgs
-        flag_button_imgs = style.flag_button_imgs
-        if cell.is_mine:
-            reveal_button_imgs = (style.mine_img, style.mine_img, style.mine_img)
-        else:
-            reveal_button_imgs = (style.num_imgs[cell.val], style.num_imgs[cell.val])
+        text_rect = pg.Rect(0, 0, 0, 0)
+
+        text_rect.unionall_ip([rect for surface, rect in renders])
+        text_surface = pg.Surface(text_rect.size)
+
+        text_surface.blits(renders)
+        self.surface = text_surface
+        self.rect = text_rect
+
+class PopUp():
+    def __init__(self, rect: pg.Rect, background: pg.Color|str|pg.Surface, text="", on_surface=None):
+        self.rect = rect
         
-        row, col = cell.coord
-        offset = ((CELLSIZE+GAP)*col, (CELLSIZE+GAP)*row)
+        if on_surface is None:
+            on_surface = pg.display.get_surface()
+        self.on_surface = on_surface
 
-        self.normal_button = Button(normal_button_imgs, offset, funcs={1: self.expose, 3: self.flag}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
-        self.flagged_button = Button(flag_button_imgs, offset, funcs={3: self.flag}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
-        self.revealed_button = Button(reveal_button_imgs, offset, funcs={1: self.attempt_expose_around}, on_surface=cell.minefield.board, surface_abs_pos=cell.minefield.board_abs_pos)
-        self.active_button = self.normal_button
-
-        self.cell = cell
-
-    def expose(self, _):
-        self.cell.expose()
-
-    def flag(self, _):
-        self.cell.flag()
-
-    def attempt_expose_around(self, _):
-        self.cell.expose_around()
-
-    def _on_mouse_button(self, event):
-        self.active_button._on_mouse_button(event)
+        if isinstance(background, str):
+            raise Exception("NOT IMPLEMENTED YET")
+        elif isinstance(background, pg.Color):
+            color = background
+            background = pg.Surface((rect.w, rect.h))
+            background.fill(color)
+        elif isinstance(background, pg.Surface):
+            background = background.subsurface(rect)    # Crops Image
+        self.background = background
 
     def draw(self):
-        cell = self.cell
-        if cell.is_exposed:
-            self.active_button = self.revealed_button
-        elif cell.is_flagged:
-            self.active_button = self.flagged_button
-        else:
-            self.active_button = self.normal_button
-        self.active_button.draw()
+        self.on_surface.blit(self.background, self.rect)
