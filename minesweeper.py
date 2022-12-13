@@ -16,44 +16,99 @@ class Cell():
         is_flagged (bool): if this cell is flagged
         self.is_exposed (bool): if this cell is exposed
         self.minefield (Minefield): the minefield that the Cell is in
-        self.button (CellButton): The `CellButton` that is instantiated for this cell
+        self.button (Button): The `Button` that is instantiated for this cell
     """
-    def __init__(self, coord, val, minefield, cellstyle, is_mine=False, is_flagged=False, exposed=False):
-        """Creates a `Cell` and instantiate the `CellButton` associated to it"""
+    def __init__(self, coord: tuple[int, int], val: int, minefield: "Minefield", cellstyle: UI.CellButtonStyle, is_mine=False, is_flagged=False, is_exposed=False):
+        """Creates a `Cell` with a changeable `Button` associated to it"""
         self.coord = coord  # coord = (row, col) where top-left is 0,0
         self.val = val  # Number of bombs around this cell (None if is_mine)
         self.is_mine = is_mine  # Boolean
         self.is_flagged = is_flagged # Don't care for now
-        self.is_exposed = exposed  # Sean will take care of this
+        self.is_exposed = is_exposed  # Sean will take care of this
+        self.cellstyle = cellstyle
         self.minefield = minefield
-        self.button = UI.CellButton(self, cellstyle)
 
-        listening_mouse_button.add(self.button)
+        row, col = coord
+        self.offset = ((CELLSIZE+GAP)*col, (CELLSIZE+GAP)*row)
+        self.button = UI.Button(cellstyle.normal_button_imgs, self.offset,
+            funcs={1: lambda _: self.start_game(1),  # All buttons start by being a "start game" button
+                   3: lambda _: self.start_game(3)},       # Flags can be placed without starting game
+            on_surface=self.minefield.board, surface_abs_pos=self.minefield.board_abs_pos)
 
+        self.button.enable()
+
+    # Setters / Getters
+    def set_mine(self, is_mine: bool):
+        """Setter for .is_mine"""
+        self.is_mine = is_mine
+
+    def set_val(self, val: int):
+        """Setter for .val"""
+        self.val = val
+
+    # Cell-Specific Methods
     def flag(self):
+        """Toggles whether or not cell is flagged"""
         self.is_flagged = not self.is_flagged
+        self.update_button()
 
-    def expose(self): 
+    def expose(self):
         """Expose this cell and `.expose_around()` if no mines around it"""
         if self.is_exposed:
-            return 
+            return
         if self.is_mine:
             print("Lose")
         self.is_exposed = True
         if self.val == 0:   # If cell is 0, we expose those around it
             self.expose_around()
+        self.update_button()
 
     def expose_around(self):    # Expose the cells around this cell
         """Exposes surrounding cells around this cell"""
         y_range, x_range = (self.coord[0]-1, self.coord[0]+2), (self.coord[1]-1, self.coord[1]+2)
         y_range = max(y_range[0], 0), min(ROWS, y_range[1])
         x_range = max(x_range[0], 0), min(COLS, x_range[1])
-        for i in range(y_range[0], y_range[1]):
-            for j in range(x_range[0], x_range[1]):
-                self.minefield.matrix[i][j].expose()
+        for row in range(y_range[0], y_range[1]):
+            for col in range(x_range[0], x_range[1]):
+                    self.minefield.matrix[row][col].expose()
+
+    def start_game(self, button):
+        """Informs Minefield to start game, and exposes this cell after the game starts"""
+        self.minefield.start_game(self.coord)   # Will get rid of all the "start buttons"
+        if button == 1:
+            self.expose()                           # This cell will be exposed
+        elif button ==3:
+            self.flag()
+
+    # Button Changers
+    def update_button(self):
+        """Update the Cell's Button based on the Cell's current state"""
+        self.button_to_normal()
+        if self.is_exposed:
+            self.button_to_revealed()
+        elif self.is_flagged:
+            self.button_to_flagged()
+
+    def button_to_normal(self):
+        """Changes the Cell's Button to the Normal Button"""
+        self.button.set_imgs(self.cellstyle.normal_button_imgs)
+        self.button.set_funcs({1: lambda _:self.expose(), 3: lambda _: self.flag()})
+    
+    def button_to_flagged(self):
+        """Changes the Cell's Button to the Flagged Button"""
+        self.button.set_imgs(self.cellstyle.flag_button_imgs)
+        self.button.set_funcs({3: lambda _: self.flag()})
+
+    def button_to_revealed(self):
+        """Changes the Cell's Button to the Revealed Button"""
+        if self.is_mine:
+            self.button.set_imgs(self.cellstyle.mine_button_imgs)
+        else:
+            self.button.set_imgs(self.cellstyle.num_buttons_imgs[self.val])
+        self.button.set_funcs({1: lambda _:self.expose_around()})
 
 class Minefield():
-    """Minefield consists of `Cell`s which each has a `CellButton`
+    """Minefield consists of `Cell`s which each contains a `Button`
     
     Attributes:
         board (pg.Surface): The Surface that the `CellButton`s are rendered on
@@ -61,31 +116,68 @@ class Minefield():
         board_abs_pos (int, int): The top-left of `.board` relative to the game display
         matrix (list[list[Cell]]): The game 2D matrix of `Cell`s, each with a `CellButton`
     """
-    def __init__(self, pos_centre, cellstyle, mode=1):
+    def __init__(self, pos_centre: tuple[int, int], cellstyle: UI.CellButtonStyle, mode=1) -> None:
+        """Creates the minefield filled with clickable `Cell`s"""
         self.board = pg.Surface((CELLSIZE*COLS + GAP*(COLS-1), CELLSIZE*ROWS + GAP*(ROWS-1)))
         self.board_rect = self.board.get_rect(center=pos_centre)
         self.board_abs_pos = self.board_rect.topleft
-        int_matrix = self.generate_int_matrix(5, 5, mode)
+        self.is_paused = False
+        self.mode = mode
         self.matrix = [[None]*COLS for _ in range(ROWS)]
+        for row in range(ROWS): # Create a matrix with -1 value Cells
+            for col in range(COLS):
+                self.matrix[row][col] = Cell((row, col), -1, self, cellstyle)
+
+    def fill_matrix(self, start_coord: tuple[int, int], mode: int) -> None:
+        """Fills the game matrix with actual values (instead of the initial -1) and mines"""
+        int_matrix = self.generate_int_matrix(start_coord, mode)
         for row in range(ROWS):
             for col in range(COLS):
                 val = int_matrix[row][col]
                 if val == -1:
-                    self.matrix[row][col] = Cell((row, col), -1, self, cellstyle, is_mine=True)
+                    self.matrix[row][col].set_mine(True)
                 else:
-                    self.matrix[row][col] = Cell((row, col), val, self, cellstyle, is_mine=False)
+                    self.matrix[row][col].set_val(val)
+
+    def start_game(self, start_coord: tuple[int, int]) -> None:
+        """Change the state of cell button from a "start button" to their appropriate button + Posts a GAMESTART event"""
+        self.fill_matrix(start_coord, self.mode)
+        for row in self.matrix:
+            for cell in row:
+                cell.update_button()
+        pg.event.post(pg.event.Event(GAMESTART, {"Minefield": self}))   # Sends a GAMESTART event to be handled in main.py
+    
+    def toggle_pause(self) -> None:
+        if self.is_paused:
+            self.resume()
+        else:
+            self.pause()
+
+    def pause(self) -> None:
+        """Disable all Buttons"""
+        for row in self.matrix:
+            for cell in row:
+                cell.button.disable()
+        self.is_paused = True
+    
+    def resume(self) -> None:
+        """Enable all Buttons"""
+        for row in self.matrix:
+            for cell in row:
+                cell.button.enable()
+        self.is_paused = False
 
     @staticmethod
-    def generate_int_matrix(start_row: int, start_col: int, mode: int) -> list[list[int]]:
+    def generate_int_matrix(start_coord: tuple[int, int], mode: int) -> list[list[int]]:
         """Generates random minefield - 2D Array of Cell object type
 
-            Parameters:
+            Args:
                 start_row: starting y-coordinate
                 start_col: starting x-coordinate
                 mode:
                     0 - (Are you cheating?): Ensures 1st cell is always a "0"
                     1 - (Standard): Ensures 1st cell is minimally an integer """
-            
+
         def generate_bombs(int_matrix: list[list[int]], blocked_rows: list, blocked_cols: list, mode: int) -> list[list[int]]:
             """Determines number of bombs and assigns them to base matrix"""
             bombs = BOMBS
@@ -94,14 +186,14 @@ class Minefield():
                     randy = randint(0, ROWS-1)
                     randx = randint(0, COLS-1)
                     if mode == 1:
-                        #Ensures cell is some integer - Not a bomb
+                        # Ensures cell is some integer - Not a bomb
                         if not int_matrix[randy][randx] == -1 and not (randy == blocked_rows[1] and randx == blocked_cols[1]):
                             int_matrix[randy][randx] = -1
                             break
                     if mode == 0:
-                        #Ensures cell is a "0"
+                        # Ensures cell is a "0"
                         if not int_matrix[randy][randx] == -1 and not (randy in blocked_rows and randx in blocked_cols):
-                            #Ensures cell is not already a bomb
+                            # Ensures cell is not already a bomb
                             int_matrix[randy][randx] = -1
                             break
 
@@ -127,21 +219,24 @@ class Minefield():
             return count
 
         int_matrix = [[0]*COLS for _ in range(ROWS)]
+        start_row, start_col = start_coord
         generate_bombs(int_matrix, list(range(start_row-1,start_row+2)), list(range(start_col-1,start_col+2)), mode)    
         allocate_val(int_matrix)
         return int_matrix
     
     def draw_board(self):
         """Renders the Cell's Buttons onto the minefield's `.board`"""
-        self.board.fill(COLOR_BG2)
+        self.board.fill(COLOR_DARK2)
         for row in self.matrix:
             for cell in row:
                 cell.button.draw()
 
+class Game():
+    pass
 
 # ================Debugging tools===============
 
-def print_field(minefield) -> None:
+def print_field(minefield: list[list[Cell]]) -> None:
     """Debugging - Prints field"""
     for y in range(ROWS):
         for x in range(COLS):
