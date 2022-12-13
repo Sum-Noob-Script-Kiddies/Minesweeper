@@ -24,9 +24,10 @@ while True:
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_SPACE:
                 minefield.toggle_pause()
-
+    #minesweeper.print_field(minefield.matrix)
     screen.fill(COLOR_DARK)   # Render the screen's background
     minefield.draw_board()  # Render the cells onto the board
     screen.blit(minefield.board, minefield.board_rect)  # Render the board onto the screen
-
+    
     pg.display.update()
+    

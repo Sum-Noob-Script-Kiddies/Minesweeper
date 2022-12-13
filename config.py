@@ -9,7 +9,7 @@ BOMBS = 50
 CELLSIZE = 25
 GAP = 3
 
-GAMEMODE = 1
+GAMEMODE = 0
 
 # Constants
 

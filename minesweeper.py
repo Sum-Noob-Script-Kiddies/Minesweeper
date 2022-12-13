@@ -3,8 +3,6 @@ import pygame as pg
 import UI
 from random import randint
 
-ROWS, COLS = 16, 16
-BOMBS = 50
 
 class Cell():
     """A `Cell` is an object with a `CellButton` that user interacts with
@@ -56,12 +54,16 @@ class Cell():
         """Expose this cell and `.expose_around()` if no mines around it"""
         if self.is_exposed:
             return
-        if self.is_mine:
+        if self.is_mine and self.is_exposed:
             print("Lose")
-        self.is_exposed = True
-        if self.val == 0:   # If cell is 0, we expose those around it
-            self.expose_around()
+        if not self.is_flagged:
+            self.is_exposed = True
+            if self.val == 0:   # If cell is 0, we expose those around it
+                self.expose_around()
         self.update_button()
+        if self.minefield.check_win():
+            print("You win!")
+
 
     def expose_around(self):    # Expose the cells around this cell
         """Exposes surrounding cells around this cell"""
@@ -71,13 +73,25 @@ class Cell():
         for row in range(y_range[0], y_range[1]):
             for col in range(x_range[0], x_range[1]):
                     self.minefield.matrix[row][col].expose()
+    
+    def attempt_expose_around(self):
+        flags = 0
+        y_range, x_range = (self.coord[0]-1, self.coord[0]+2), (self.coord[1]-1, self.coord[1]+2)
+        y_range = max(y_range[0], 0), min(ROWS, y_range[1])
+        x_range = max(x_range[0], 0), min(COLS, x_range[1])
+        for row in range(y_range[0], y_range[1]):
+            for col in range(x_range[0], x_range[1]):
+                if self.minefield.matrix[row][col].is_flagged:
+                    flags += 1
+        if flags == self.minefield.matrix[self.coord[0]][self.coord[1]].val and self.is_exposed:
+            self.expose_around()
 
     def start_game(self, button):
         """Informs Minefield to start game, and exposes this cell after the game starts"""
         self.minefield.start_game(self.coord)   # Will get rid of all the "start buttons"
         if button == 1:
             self.expose()                           # This cell will be exposed
-        elif button ==3:
+        elif button == 3:
             self.flag()
 
     # Button Changers
@@ -105,7 +119,7 @@ class Cell():
             self.button.set_imgs(self.cellstyle.mine_button_imgs)
         else:
             self.button.set_imgs(self.cellstyle.num_buttons_imgs[self.val])
-        self.button.set_funcs({1: lambda _:self.expose_around()})
+        self.button.set_funcs({1: lambda _:self.attempt_expose_around()})
 
 class Minefield():
     """Minefield consists of `Cell`s which each contains a `Button`
@@ -166,6 +180,14 @@ class Minefield():
             for cell in row:
                 cell.button.enable()
         self.is_paused = False
+    
+    def check_win(self) -> bool:
+        """Winning condition"""
+        for row in self.matrix:
+            for cell in row:
+                if not cell.is_exposed and not cell.is_mine:
+                    return False
+        return True
 
     @staticmethod
     def generate_int_matrix(start_coord: tuple[int, int], mode: int) -> list[list[int]]:
@@ -222,6 +244,7 @@ class Minefield():
         start_row, start_col = start_coord
         generate_bombs(int_matrix, list(range(start_row-1,start_row+2)), list(range(start_col-1,start_col+2)), mode)    
         allocate_val(int_matrix)
+        
         return int_matrix
     
     def draw_board(self):
@@ -240,7 +263,7 @@ def print_field(minefield: list[list[Cell]]) -> None:
     """Debugging - Prints field"""
     for y in range(ROWS):
         for x in range(COLS):
-            if not minefield[y][x].exposed:
+            if minefield[y][x].is_exposed:
                 # "not" added in for debugging
                 if minefield[y][x].is_mine:
                     print("*",end=" ")
