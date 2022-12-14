@@ -11,7 +11,17 @@ screen_rect = screen.get_rect()
 cellstyle = UI.CellButtonStyle(("assets/cell/idle.png", "assets/cell/hover.png"), "assets/cell/flag.png", "assets/cell/mine.png", "assets/cell/")
 minefield = minesweeper.Minefield(screen_rect.center, cellstyle, mode=GAMEMODE)     # Creates a minefield with the given cellstyle and mode
 
-while True:
+switch = False
+
+font = pg.font.Font("assets/fonts/Rare Game.otf", 32)
+green = COLOR_LIGHT
+cur_dur = 0
+
+def start_timer():
+    start_ticks = pg.time.get_ticks()
+    return start_ticks
+    
+while True: 
     for event in pg.event.get():    # Event Loop
         if event.type == pg.QUIT:
             pg.quit()
@@ -24,10 +34,9 @@ while True:
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_SPACE:
                 minefield.toggle_pause()
-    #minesweeper.print_field(minefield.matrix)
+
     screen.fill(COLOR_DARK)   # Render the screen's background
     minefield.draw_board()  # Render the cells onto the board
     screen.blit(minefield.board, minefield.board_rect)  # Render the board onto the screen
-    
+
     pg.display.update()
-    
