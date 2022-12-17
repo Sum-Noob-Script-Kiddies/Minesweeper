@@ -15,11 +15,12 @@ GAMEMODE = 0
 
 COLOR_DARK = pg.Color("#292831")
 COLOR_DARK2 = pg.Color("#333f58")
-COLOR_LIGHT = pg.Color("#fbbbad") 
+COLOR_LIGHT = pg.Color("#fbbbad")
+COLOR_LIGHT2 = pg.Color("#ee8695")
 
-FONT_PATH = "assets/fonts/the-bomb-sound.regular.ttf"
+FONT_PATH = "assets/fonts/AdventPro-Regular.ttf"
 FONT_SIZE = 20
-FONT = freetype.Font("assets/fonts/the-bomb-sound.regular.ttf", 20)
+FONT = freetype.Font("assets/fonts/AdventPro-Regular.ttf", 20)
 
 GAMESTART = pg.event.custom_type() 
 

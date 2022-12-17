@@ -239,32 +239,56 @@ class CellButtonStyle():
 
 # WIP
 class Text():
-    def __init__(self, text: str, size=0, line_height=None, color=COLOR_LIGHT, font=FONT):
+    def __init__(self, text: str, size=0, color=COLOR_DARK2, offset=0, font=FONT):
+        """ Creates multi-line text with a consistent leading height from one baseline to another.
+        
+        Line breaks have to be explicitly provided in `text`.
+        
+        Attributes:
+            surface (pg.Surface): The surface with the Multi-Line Text rendered
+            rect (pg.Rect): The bounding rectangle of `surface`
+        """
         renders = []
-        max_line_height = 0
+        height = font.get_sized_height(size)
+        leading = height + offset
+
         for line in text.split("\n"):
             renders.append(font.render(line, fgcolor=color, size=size))
-
         
-        offset_from_top = 0
+        current_baseline = leading
         # for surface, rect in renders:
         #     print(surface, rect, surface.get_rect())
         for surface, rect in renders:
-            print(rect, surface.get_rect())
-            rect.move_ip(0, offset_from_top)
-            offset_from_top += rect.height
+            origin = rect.topleft   # Pygame has the origin of the line as the topleft of the returned Rect
+            baseline_from_top_of_rect = origin[1]
+            rect.top = current_baseline - baseline_from_top_of_rect
+            current_baseline += leading
         
         text_rect = pg.Rect(0, 0, 0, 0)
-
         text_rect.unionall_ip([rect for surface, rect in renders])
-        text_surface = pg.Surface(text_rect.size)
 
+        text_surface = pg.Surface(text_rect.size, pg.SRCALPHA)  # Creates a transparent Surface
         text_surface.blits(renders)
+
         self.surface = text_surface
         self.rect = text_rect
 
+# pg.init()
+# screen = pg.display.set_mode((600,500))
+# t = Text("mmmh\n...NOX\ngmyg\ngmyg\nHELyym\ngmyg")
+# while True:
+#     for event in pg.event.get():
+#         if event.type == pg.QUIT:
+#             pg.quit()
+#             exit()
+#     screen.fill(COLOR_DARK)
+    
+
+#     screen.blit(t.surface, t.rect)
+#     pg.display.update()
+
 class PopUp():
-    def __init__(self, rect: pg.Rect, background: pg.Color|str|pg.Surface, text="", on_surface=None):
+    def __init__(self, rect: pg.Rect, background: pg.Color|str|pg.Surface, text: Text = None, on_surface=None):
         self.rect = rect
         
         if on_surface is None:
@@ -281,5 +305,32 @@ class PopUp():
             background = background.subsurface(rect)    # Crops Image
         self.background = background
 
+        # Border
+        self.border_rect = rect.inflate(12,12)
+        self.border = pg.Surface(self.border_rect.size)
+        self.border.fill((0,0,0,0))
+
+        # Text explicitely set through setter
+
+    def set_border(self, color: pg.Color):
+        self.border.fill(color)
+        self.border_rect.center = self.rect.center
+
+    def set_text(self, text: Text, bottom_bound_offset=0):
+        """Aligns the given text at the given offset relative to the body of the popup
+        
+        Text will always be centered in the pop-up's body rectangle,
+        but an `bottom_bound_offset` can be specified to push the bottom of this rectangle up
+        """
+        text_rect = text.rect.copy()
+        text_rect.centerx = self.rect.centerx
+        text_rect.centery = self.rect.centery - bottom_bound_offset
+        
+        self.text_surf = text.surface
+        self.text_rect = text_rect
+
     def draw(self):
+        self.on_surface.blit(self.border, self.border_rect)
         self.on_surface.blit(self.background, self.rect)
+        self.on_surface.blit(self.text_surf, self.text_rect)
+
