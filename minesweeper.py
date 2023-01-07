@@ -28,11 +28,9 @@ class Cell():
 
         row, col = coord
         self.offset = ((CELLSIZE+GAP)*col, (CELLSIZE+GAP)*row)
-        self.button = UI.Button(cellstyle.normal_button_imgs, self.offset,
-            funcs={1: lambda _: self.start_game(1),  # All buttons start by being a "start game" button
-                   3: lambda _: self.start_game(3)},       # Flags can be placed without starting game
+        self.button = UI.Button(self.cellstyle.normal_button_imgs, self.offset, None,
             on_surface=self.minefield.board, surface_abs_pos=self.minefield.board_abs_pos)
-
+        self.button_to_start()
         self.button.enable()
 
     # Setters / Getters
@@ -44,6 +42,15 @@ class Cell():
         """Setter for .val"""
         self.val = val
 
+    def reset_cell(self):
+        """Resets the Cell back and it's Button back to the start button"""
+        self.val = -1
+        self.is_mine = False
+        self.is_flagged = False
+        self.is_exposed = False
+        self.button_to_start()
+        self.button.enable()
+
     # Cell-Specific Methods
     def flag(self):
         """Toggles whether or not cell is flagged"""
@@ -52,18 +59,23 @@ class Cell():
 
     def expose(self):
         """Expose this cell and `.expose_around()` if no mines around it"""
-        if self.is_exposed:
+        if self.is_exposed or self.is_flagged:
             return
-        if self.is_mine and self.is_exposed:
-            print("Lose")
-        if not self.is_flagged:
-            self.is_exposed = True
-            if self.val == 0:   # If cell is 0, we expose those around it
-                self.expose_around()
-        self.update_button()
-        if self.minefield.check_win():
-            print("You win!")
 
+        self.is_exposed = True
+        self.minefield.no_exposed += 1
+        if self.val == 0:   # If cell is 0, we expose those around it
+            self.expose_around()
+        self.update_button()
+
+        # Check Losing Condition
+        if self.is_mine:
+            print("Lose")
+            pg.event.post(pg.event.Event(GAMEEND, {"won": False}))
+        # Check Winning Condition
+        elif self.minefield.check_win():
+            print("Win")
+            pg.event.post(pg.event.Event(GAMEEND, {"won": True}))
 
     def expose_around(self):    # Expose the cells around this cell
         """Exposes surrounding cells around this cell"""
@@ -103,6 +115,12 @@ class Cell():
         elif self.is_flagged:
             self.button_to_flagged()
 
+    def button_to_start(self):
+        """Returns a new Button that generates a minefield when clicked"""
+        self.button.set_imgs(self.cellstyle.normal_button_imgs)
+        self.button.set_funcs({1: lambda _: self.start_game(1),         # All buttons start by being a "start game" button
+                               3: lambda _: self.start_game(3)})        # Flags can be placed without starting game
+
     def button_to_normal(self):
         """Changes the Cell's Button to the Normal Button"""
         self.button.set_imgs(self.cellstyle.normal_button_imgs)
@@ -135,15 +153,23 @@ class Minefield():
         self.board = pg.Surface((CELLSIZE*COLS + GAP*(COLS-1), CELLSIZE*ROWS + GAP*(ROWS-1)))
         self.board_rect = self.board.get_rect(center=pos_centre)
         self.board_abs_pos = self.board_rect.topleft
-        self.is_paused = False
+        self.is_suspended = False
         self.mode = mode
         self.matrix = [[None]*COLS for _ in range(ROWS)]
         for row in range(ROWS): # Create a matrix with -1 value Cells
             for col in range(COLS):
-                self.matrix[row][col] = Cell((row, col), -1, self, cellstyle)
+                self.matrix[row][col] = Cell((row, col), -1, self, cellstyle)   # Initialises with -1 default value
+        
+        self.no_exposed = 0
+    
+    def reset_board(self):
+        self.no_exposed = 0
+        for cells in self.matrix:
+            for cell in cells:
+                cell.reset_cell()
 
     def fill_matrix(self, start_coord: tuple[int, int], mode: int) -> None:
-        """Fills the game matrix with actual values (instead of the initial -1) and mines"""
+        """Fills the game matrix with new values and mines"""
         int_matrix = self.generate_int_matrix(start_coord, mode)
         for row in range(ROWS):
             for col in range(COLS):
@@ -160,26 +186,20 @@ class Minefield():
             for cell in row:
                 cell.update_button()
         pg.event.post(pg.event.Event(GAMESTART, {"Minefield": self}))   # Sends a GAMESTART event to be handled in main.py
-    
-    def toggle_pause(self) -> None:
-        if self.is_paused:
-            self.resume()
-        else:
-            self.pause()
 
-    def pause(self) -> None:
+    def suspend(self) -> None:
         """Disable all Buttons"""
         for row in self.matrix:
             for cell in row:
                 cell.button.disable()
-        self.is_paused = True
+        self.is_suspended = True
     
     def resume(self) -> None:
         """Enable all Buttons"""
         for row in self.matrix:
             for cell in row:
                 cell.button.enable()
-        self.is_paused = False
+        self.is_suspended = False
     
     def check_win(self) -> bool:
         """Winning condition"""

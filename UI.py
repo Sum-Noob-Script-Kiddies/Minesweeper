@@ -312,25 +312,66 @@ class PopUp():
 
         # Text explicitely set through setter
 
+        # Buttons
+        self.buttons = []
+
+        self.is_hidden = True
+
     def set_border(self, color: pg.Color):
         self.border.fill(color)
         self.border_rect.center = self.rect.center
 
-    def set_text(self, text: Text, bottom_bound_offset=0):
-        """Aligns the given text at the given offset relative to the body of the popup
+    def set_text(self, text: Text, bounding_margins=(0, 0, 0, 0)):
+        """Aligns the given text centred in the bounding rectange, which by default is the entire pop-up.
         
-        Text will always be centered in the pop-up's body rectangle,
-        but an `bottom_bound_offset` can be specified to push the bottom of this rectangle up
+        Hence, text will be centered in the pop-up by default.
+        A `bounding_margins` can be specified to push the top, bottom, left, right of the bounding rectangle
         """
+        top = self.rect.top + bounding_margins[0]
+        bottom = self.rect.bottom - bounding_margins[1]
+        left = self.rect.left + bounding_margins[2]
+        right = self.rect.right - bounding_margins[3]
+        bounding_rect = pg.Rect(left, top, right-left, bottom-top)
         text_rect = text.rect.copy()
-        text_rect.centerx = self.rect.centerx
-        text_rect.centery = self.rect.centery - bottom_bound_offset
+        text_rect.center = bounding_rect.center
         
         self.text_surf = text.surface
         self.text_rect = text_rect
 
+    def add_button(self, imgs, funcs=None, bounding_margins=(0, 0, 0, 0)):
+        """Adds a button centred in the bounding rectange, which by default is the entire pop-up.
+        
+        Hence, button will be centered in the pop-up by default.
+        A `bounding_margins` can be specified to push the top, bottom, left, right of the bounding rectangle
+        """
+        top = bounding_margins[0]
+        bottom = self.rect.h - bounding_margins[1]
+        left = bounding_margins[2]
+        right = self.rect.w - bounding_margins[3]
+        bounding_rect = pg.Rect(left, top, right-left, bottom-top)
+        button = Button(imgs, bounding_rect.center, funcs, on_surface=self.background, surface_abs_pos=self.rect.topleft, center=True)
+        button.enable()
+        self.buttons.append(button)
+
+    def hide(self):
+        """Disables and Hides the Popup on .draw()"""
+        for button in self.buttons:
+            button.disable()
+        self.is_hidden = True
+    
+    def unhide(self):
+        """Enables and Show the Popup on .draw()"""
+        for button in self.buttons:
+            button.enable()
+        self.is_hidden = False
+        
     def draw(self):
+        """Draws Popup if not hidden"""
+        if self.is_hidden:
+            return
         self.on_surface.blit(self.border, self.border_rect)
         self.on_surface.blit(self.background, self.rect)
         self.on_surface.blit(self.text_surf, self.text_rect)
+        for button in self.buttons:
+            button.draw()
 
