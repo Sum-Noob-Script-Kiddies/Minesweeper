@@ -50,9 +50,16 @@ while True:
                 gameover_popup.set_text(UI.Text("You\nWin!", 60), bounding_margins=(0, 120, 0, 0))
             else:
                 gameover_popup.set_text(UI.Text("Ya\nSuck!", 60), bounding_margins=(0, 120, 0, 0))
+                for cells in minefield.matrix:
+                    for cell in cells:
+                        if cell.is_mine and not cell.is_flagged:
+                            cell.expose()
+                        if not cell.is_mine and cell.is_flagged:
+                            cell.button.set_imgs("assets/cell/flag_wrong.png")
             game_ended = True
             minefield.suspend()
             gameover_popup.unhide()
+
 
     screen.fill(COLOR_DARK) # Render the screen's background
     minefield.draw_board()  # Render the cells onto the board
