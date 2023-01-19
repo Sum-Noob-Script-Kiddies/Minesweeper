@@ -2,15 +2,17 @@
 Our very first Pygame Project
 
 ## Updates
+- Game Timer
+- Bomb Counter
 - Cells are now clickable
 - Clicking on a 0-Cell will automatically expose the cells around
-- Game Start Event whe
+- Game Start Event when player clicks on a cell
 
 ## Current WIP
-- Game Timer
+<!-- - Game Timer
     - Sean is working on this
     - As of now just get a nice working timer that starts when the program starts
-    - We will implement starting only after clicking 1st cell later on
+    - We will implement starting only after clicking 1st cell later on -->
 
 - `Cell`'s `.expose_around()` should **only expose unflagged cells**
     - This is to integrate with the pressing on revealed cell feature, where only unflagged cells are exposed

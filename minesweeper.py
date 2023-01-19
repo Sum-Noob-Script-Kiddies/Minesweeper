@@ -55,6 +55,10 @@ class Cell():
     def flag(self):
         """Toggles whether or not cell is flagged"""
         self.is_flagged = not self.is_flagged
+        if self.is_flagged:
+            self.minefield.remaining_bombs -= 1
+        else: 
+            self.minefield.remaining_bombs += 1
         self.update_button()
 
     def expose(self):
@@ -72,6 +76,7 @@ class Cell():
         if self.is_mine:
             print("Lose")
             pg.event.post(pg.event.Event(GAMEEND, {"won": False}))
+            
         # Check Winning Condition
         elif self.minefield.check_win():
             print("Win")
@@ -161,9 +166,11 @@ class Minefield():
                 self.matrix[row][col] = Cell((row, col), -1, self, cellstyle)   # Initialises with -1 default value
         
         self.no_exposed = 0
+        self.remaining_bombs = BOMBS
     
     def reset_board(self):
         self.no_exposed = 0
+        self.remaining_bombs = BOMBS
         for cells in self.matrix:
             for cell in cells:
                 cell.reset_cell()
@@ -185,7 +192,7 @@ class Minefield():
         for row in self.matrix:
             for cell in row:
                 cell.update_button()
-        pg.event.post(pg.event.Event(GAMESTART, {"Minefield": self}))   # Sends a GAMESTART event to be handled in main.py
+        pg.event.post(pg.event.Event(GAMESTART))   # Sends a GAMESTART event to be handled in main.py
 
     def suspend(self) -> None:
         """Disable all Buttons"""
