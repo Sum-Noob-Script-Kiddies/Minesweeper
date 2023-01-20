@@ -54,22 +54,22 @@ while True:
             if event.won:
                 gameover_popup.set_text(UI.Text("You\nWin!", 60), bounding_margins=(0, 120, 0, 0))
             else:
-                end_tick = pg.time.get_ticks()
                 gameover_popup.set_text(UI.Text(" Ya\nSuck!", 60), bounding_margins=(0, 120, 0, 0))
                 # # what about using numpy?
-                # cells = list(np.hstack(minefield.matrix))
+                # cells = list(np.hstack(minefield))
                 # for cell in cells:
                 #     if cell.is_mine and not cell.is_flagged:
                 #         cell.expose()
                 #     if not cell.is_mine and cell.is_flagged:
                 #         cell.button.set_imgs("assets/cell/flag_wrong.png")
 
-                for cells in minefield.matrix:
+                for cells in minefield:
                     for cell in cells:
                         if cell.is_mine and not cell.is_flagged:
                             cell.expose()
                         if not cell.is_mine and cell.is_flagged:
-                            cell.button.set_imgs("assets/cell/flag_wrong.png")
+                            cell.set_imgs("assets/cell/flag_wrong.png")
+            end_tick = pg.time.get_ticks()
             game_ended = True
             minefield.suspend()
             gameover_popup.unhide()
